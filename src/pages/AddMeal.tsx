@@ -10,6 +10,7 @@ import { analyzeFood, analyzeFoodFromImage } from '@/services/aiService'
 import { getProductByBarcode } from '@/services/openFoodFactsService'
 import { PhotoUpload } from '@/components/features/meals/PhotoUpload'
 import { BarcodeScanner } from '@/components/features/meals/BarcodeScanner'
+import { VoiceInput } from '@/components/features/meals/VoiceInput'
 import type { Meal, MealType, FoodItem } from '@/types'
 
 const MEAL_TYPES: { value: MealType; label: string }[] = [
@@ -235,7 +236,7 @@ export function AddMeal() {
                 </Button>
                 <Button
                   variant="outline"
-                  disabled
+                  onClick={() => setInputMode('voice')}
                   className="flex-col h-auto py-3"
                 >
                   <Mic className="h-5 w-5 mb-1" />
@@ -243,7 +244,7 @@ export function AddMeal() {
                 </Button>
               </div>
               <p className="text-xs text-center text-gray-500">
-                ✨ Foto e código de barras agora disponíveis!
+                ✨ Todos os métodos de entrada disponíveis!
               </p>
             </CardContent>
           </Card>
@@ -261,6 +262,21 @@ export function AddMeal() {
         {inputMode === 'barcode' && (
           <BarcodeScanner
             onBarcodeScanned={handleBarcodeScanned}
+            onClose={() => setInputMode('text')}
+          />
+        )}
+
+        {/* Voice Input */}
+        {inputMode === 'voice' && (
+          <VoiceInput
+            onTranscript={(text) => {
+              setFoodInput(text)
+              setInputMode('text')
+              // Auto-analyze after voice input
+              setTimeout(() => {
+                handleTextAnalyze()
+              }, 500)
+            }}
             onClose={() => setInputMode('text')}
           />
         )}

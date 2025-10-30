@@ -2,6 +2,7 @@ import { useAppStore } from '@/store/useAppStore'
 import { CalorieProgress } from '@/components/features/dashboard/CalorieProgress'
 import { MacroCircle } from '@/components/features/dashboard/MacroCircle'
 import { MealsList } from '@/components/features/dashboard/MealsList'
+import { WaterTracker } from '@/components/features/dashboard/WaterTracker'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -10,7 +11,7 @@ import { calculatePercentage } from '@/lib/utils'
 import { getBodyTypeRecommendations } from '@/services/calculations'
 
 export function Dashboard() {
-  const { user, bodyMetrics, nutritionGoals, dailySummary, deleteMeal } = useAppStore()
+  const { user, bodyMetrics, nutritionGoals, dailySummary, deleteMeal, updateWaterIntake } = useAppStore()
 
   if (!user || !bodyMetrics || !nutritionGoals) {
     return (
@@ -139,6 +140,13 @@ export function Dashboard() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Water Tracker */}
+        <WaterTracker
+          goal={nutritionGoals.water}
+          current={dailySummary?.waterIntake || 0}
+          onUpdate={updateWaterIntake}
+        />
 
         {/* Meals List */}
         <MealsList meals={dailySummary?.meals || []} onDeleteMeal={deleteMeal} />

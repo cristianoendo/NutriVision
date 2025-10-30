@@ -1,4 +1,4 @@
-import { Home, PlusCircle, BookOpen, User } from 'lucide-react'
+import { Home, PlusCircle, TrendingUp, BookOpen, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface BottomNavProps {
@@ -9,6 +9,7 @@ interface BottomNavProps {
 const tabs = [
   { id: 'home', label: 'Início', icon: Home },
   { id: 'add', label: 'Adicionar', icon: PlusCircle },
+  { id: 'progress', label: 'Progresso', icon: TrendingUp },
   { id: 'recipes', label: 'Receitas', icon: BookOpen },
   { id: 'profile', label: 'Perfil', icon: User },
 ]

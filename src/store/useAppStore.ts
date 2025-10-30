@@ -49,6 +49,9 @@ interface AppState {
   deleteMeal: (mealId: string) => void
   clearTodayMeals: () => void
 
+  // Actions - Water
+  updateWaterIntake: (amount: number) => void
+
   // Actions - Notifications
   addNotification: (notification: Omit<Notification, 'id'>) => void
   markNotificationAsRead: (notificationId: string) => void
@@ -153,6 +156,19 @@ export const useAppStore = create<AppState>()(
         set({ meals: [], dailySummary: null })
       },
 
+      // Water actions
+      updateWaterIntake: (amount) => {
+        const currentSummary = get().dailySummary
+        if (currentSummary) {
+          set({
+            dailySummary: {
+              ...currentSummary,
+              waterIntake: amount,
+            },
+          })
+        }
+      },
+
       // Notification actions
       addNotification: (notification) => {
         const newNotification: Notification = {
@@ -187,7 +203,7 @@ export const useAppStore = create<AppState>()(
       },
 
       updateDailySummary: () => {
-        const { meals, nutritionGoals } = get()
+        const { meals, nutritionGoals, dailySummary: currentSummary } = get()
         if (!nutritionGoals) return
 
         const today = new Date()
@@ -233,6 +249,9 @@ export const useAppStore = create<AppState>()(
           (caloriesAdherence + proteinAdherence + carbsAdherence + fatsAdherence) / 4
         )
 
+        // Preserve water intake from current summary
+        const waterIntake = currentSummary?.waterIntake || 0
+
         const dailySummary: DailySummary = {
           date: today,
           meals: todayMeals,
@@ -241,7 +260,7 @@ export const useAppStore = create<AppState>()(
           totalCarbs,
           totalFats,
           totalFiber,
-          waterIntake: 0, // TODO: Track water intake separately
+          waterIntake,
           avgGlycemicIndex,
           caloriesGoal: nutritionGoals.dailyCalories,
           proteinGoal: nutritionGoals.protein,

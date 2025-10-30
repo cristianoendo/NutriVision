@@ -4,6 +4,7 @@ import { SplashScreen } from './components/features/splash/SplashScreen'
 import { OnboardingFlow } from './components/features/onboarding/OnboardingFlow'
 import { Dashboard } from './pages/Dashboard'
 import { AddMeal } from './pages/AddMeal'
+import { Progress } from './pages/Progress'
 import { Recipes } from './pages/Recipes'
 import { Profile } from './pages/Profile'
 import { BottomNav } from './components/layout/BottomNav'
@@ -52,6 +53,7 @@ function App() {
       {/* Render active page */}
       {activeTab === 'home' && <Dashboard />}
       {activeTab === 'add' && <AddMeal />}
+      {activeTab === 'progress' && <Progress />}
       {activeTab === 'recipes' && <Recipes />}
       {activeTab === 'profile' && <Profile />}
 
