@@ -4,8 +4,9 @@
 
 VidaLeve é um aplicativo SaaS mobile-responsive completo de nutrição e emagrecimento, com foco em medicina funcional, otimização hormonal e personalização baseada no tipo corporal.
 
-![Version](https://img.shields.io/badge/version-1.0.0-green)
+![Version](https://img.shields.io/badge/version-2.0.0-green)
 ![License](https://img.shields.io/badge/license-MIT-blue)
+![Phase](https://img.shields.io/badge/phase-2-blue)
 
 ## 🎯 Visão Geral
 
@@ -16,10 +17,11 @@ VidaLeve é mais do que um contador de calorias - é um assistente nutricional i
 - **Medicina Funcional**: Recomendações baseadas em nutrologia e endocrinologia
 - **Análise com IA**: Análise nutricional inteligente dos alimentos
 
-## ✨ Funcionalidades Principais (MVP)
+## ✨ Funcionalidades Principais
 
-### ✅ Implementado
+### ✅ MVP + Fase 2 Implementada
 
+**Core Features (MVP)**:
 - **Splash Screen Animado**: Introdução elegante ao app com animações suaves
 - **Onboarding Completo**: 4 telas educativas + formulário multi-step
 - **Perfil Personalizado**: Coleta de dados com validação em tempo real
@@ -35,9 +37,32 @@ VidaLeve é mais do que um contador de calorias - é um assistente nutricional i
   - Círculos de macronutrientes (Proteínas, Carboidratos, Gorduras)
   - Lista de refeições do dia com detalhes
   - Dicas personalizadas baseadas no tipo corporal
-- **Sistema de Refeições**:
+
+**Fase 2 - Recursos Avançados** ✨:
+- **📸 Upload de Fotos**:
+  - Câmera integrada ou galeria
+  - Preview da foto antes de analisar
+  - Análise nutricional via IA Vision (preparado)
+- **🔍 Scanner de Código de Barras**:
+  - Scanner HTML5 integrado
+  - Busca automática na API Open Food Facts
+  - Informação nutricional completa de produtos
+- **📖 Biblioteca de Receitas**:
+  - 6+ receitas saudáveis e balanceadas
+  - Filtros por tipo de refeição (café, almoço, jantar)
+  - Filtros por tags (vegano, low-carb, sem glúten, etc)
+  - Busca por nome
+  - Sistema de favoritos
+  - Detalhes completos (ingredientes, modo de preparo, nutrição)
+- **🔊 Text-to-Speech**:
+  - Leitura de receitas em voz alta
+  - Suporte para português brasileiro
+  - Controle de velocidade de fala
+- **Sistema de Refeições Aprimorado**:
   - Entrada manual de alimentos
-  - Análise nutricional com IA (mock)
+  - Upload de fotos
+  - Scanner de código de barras
+  - Análise nutricional com IA
   - Múltiplos tipos de refeição
   - Tracking completo de macros
 - **Tela de Perfil**:
@@ -50,8 +75,7 @@ VidaLeve é mais do que um contador de calorias - é um assistente nutricional i
 
 ### 🚧 Próximas Fases
 
-- **Fase 2**: Scanner de código de barras, fotos de alimentos, receitas, gráficos
-- **Fase 3**: Entrada de voz, wearables, chatbot IA, notificações push
+- **Fase 3**: Gráficos de progresso, entrada de voz, wearables, chatbot IA, notificações push
 
 ## 🛠️ Stack Tecnológica
 
@@ -63,6 +87,10 @@ VidaLeve é mais do que um contador de calorias - é um assistente nutricional i
 - **UI Components**: Custom components (shadcn/ui style)
 - **Icons**: Lucide React
 - **PWA**: vite-plugin-pwa
+- **Barcode Scanner**: html5-qrcode
+- **Charts**: Recharts (preparado)
+- **Camera**: react-webcam
+- **APIs**: Open Food Facts API
 
 ## 📦 Instalação
 

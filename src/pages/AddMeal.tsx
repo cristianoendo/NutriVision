@@ -5,8 +5,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Camera, Mic, Barcode, Loader2, Check } from 'lucide-react'
-import { analyzeFood } from '@/services/aiService'
+import { Camera, Mic, Barcode, Loader2, Check, ArrowLeft } from 'lucide-react'
+import { analyzeFood, analyzeFoodFromImage } from '@/services/aiService'
+import { getProductByBarcode } from '@/services/openFoodFactsService'
+import { PhotoUpload } from '@/components/features/meals/PhotoUpload'
+import { BarcodeScanner } from '@/components/features/meals/BarcodeScanner'
 import type { Meal, MealType, FoodItem } from '@/types'
 
 const MEAL_TYPES: { value: MealType; label: string }[] = [
@@ -18,15 +21,18 @@ const MEAL_TYPES: { value: MealType; label: string }[] = [
   { value: 'evening-snack', label: 'Ceia' },
 ]
 
+type InputMode = 'text' | 'photo' | 'barcode' | 'voice'
+
 export function AddMeal() {
   const { user, addMeal } = useAppStore()
   const [mealType, setMealType] = useState<MealType>('lunch')
+  const [inputMode, setInputMode] = useState<InputMode>('text')
   const [foodInput, setFoodInput] = useState('')
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analyzedFoods, setAnalyzedFoods] = useState<FoodItem[]>([])
   const [showSuccess, setShowSuccess] = useState(false)
 
-  const handleAnalyze = async () => {
+  const handleTextAnalyze = async () => {
     if (!foodInput.trim()) return
 
     setIsAnalyzing(true)
@@ -46,6 +52,40 @@ export function AddMeal() {
     }
   }
 
+  const handlePhotoAnalyze = async (imageData: string) => {
+    setIsAnalyzing(true)
+    try {
+      const result = await analyzeFoodFromImage(imageData)
+      setAnalyzedFoods(result.foods)
+      setInputMode('text') // Back to normal view
+    } catch (error) {
+      console.error('Error analyzing photo:', error)
+    } finally {
+      setIsAnalyzing(false)
+    }
+  }
+
+  const handleBarcodeScanned = async (barcode: string) => {
+    setIsAnalyzing(true)
+    try {
+      const product = await getProductByBarcode(barcode)
+
+      if (product) {
+        setAnalyzedFoods([product])
+        setInputMode('text') // Back to normal view
+      } else {
+        alert('Produto não encontrado na base de dados. Tente entrada manual.')
+        setInputMode('text')
+      }
+    } catch (error) {
+      console.error('Error fetching barcode product:', error)
+      alert('Erro ao buscar produto. Tente novamente.')
+      setInputMode('text')
+    } finally {
+      setIsAnalyzing(false)
+    }
+  }
+
   const handleSaveMeal = () => {
     if (analyzedFoods.length === 0) return
 
@@ -55,7 +95,6 @@ export function AddMeal() {
     const totalFats = analyzedFoods.reduce((sum, food) => sum + food.fats, 0)
     const totalFiber = analyzedFoods.reduce((sum, food) => sum + (food.fiber || 0), 0)
 
-    // Calculate average glycemic index
     const foodsWithGI = analyzedFoods.filter((f) => f.glycemicIndex)
     const avgGlycemicIndex =
       foodsWithGI.length > 0
@@ -78,7 +117,6 @@ export function AddMeal() {
 
     addMeal(meal)
 
-    // Show success and reset
     setShowSuccess(true)
     setTimeout(() => {
       setShowSuccess(false)
@@ -90,7 +128,18 @@ export function AddMeal() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-24">
       <div className="mx-auto max-w-4xl px-4 py-6 space-y-4">
-        <h1 className="text-2xl font-bold">Adicionar Refeição</h1>
+        <div className="flex items-center gap-3">
+          {inputMode !== 'text' && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setInputMode('text')}
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          )}
+          <h1 className="text-2xl font-bold">Adicionar Refeição</h1>
+        </div>
 
         {/* Meal Type Selection */}
         <Card>
@@ -117,62 +166,104 @@ export function AddMeal() {
         </Card>
 
         {/* Input Methods */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">O que você comeu?</CardTitle>
-            <CardDescription>Descreva os alimentos</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="food-input">Digite os alimentos</Label>
-              <Input
-                id="food-input"
-                placeholder="Ex: arroz, feijão, frango grelhado, salada"
-                value={foodInput}
-                onChange={(e) => setFoodInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !isAnalyzing) {
-                    handleAnalyze()
-                  }
-                }}
-              />
-            </div>
+        {inputMode === 'text' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Como Você Deseja Registrar?</CardTitle>
+              <CardDescription>Escolha o método de entrada</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Text Input */}
+              <div className="space-y-2">
+                <Label htmlFor="food-input">Digite os alimentos</Label>
+                <Input
+                  id="food-input"
+                  placeholder="Ex: arroz, feijão, frango grelhado, salada"
+                  value={foodInput}
+                  onChange={(e) => setFoodInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !isAnalyzing) {
+                      handleTextAnalyze()
+                    }
+                  }}
+                />
+              </div>
 
-            <Button
-              onClick={handleAnalyze}
-              disabled={isAnalyzing || !foodInput.trim()}
-              className="w-full"
-            >
-              {isAnalyzing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Analisando...
-                </>
-              ) : (
-                'Analisar com IA'
-              )}
-            </Button>
+              <Button
+                onClick={handleTextAnalyze}
+                disabled={isAnalyzing || !foodInput.trim()}
+                className="w-full"
+              >
+                {isAnalyzing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Analisando...
+                  </>
+                ) : (
+                  'Analisar com IA'
+                )}
+              </Button>
 
-            {/* Alternative methods (disabled for MVP) */}
-            <div className="grid grid-cols-3 gap-2">
-              <Button variant="outline" disabled className="flex-col h-auto py-3">
-                <Camera className="h-5 w-5 mb-1" />
-                <span className="text-xs">Foto</span>
-              </Button>
-              <Button variant="outline" disabled className="flex-col h-auto py-3">
-                <Mic className="h-5 w-5 mb-1" />
-                <span className="text-xs">Voz</span>
-              </Button>
-              <Button variant="outline" disabled className="flex-col h-auto py-3">
-                <Barcode className="h-5 w-5 mb-1" />
-                <span className="text-xs">Código</span>
-              </Button>
-            </div>
-            <p className="text-xs text-center text-gray-500">
-              Recursos de foto, voz e código virão em breve!
-            </p>
-          </CardContent>
-        </Card>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">
+                    Ou use
+                  </span>
+                </div>
+              </div>
+
+              {/* Alternative methods */}
+              <div className="grid grid-cols-3 gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setInputMode('photo')}
+                  className="flex-col h-auto py-3"
+                >
+                  <Camera className="h-5 w-5 mb-1" />
+                  <span className="text-xs">Foto</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setInputMode('barcode')}
+                  className="flex-col h-auto py-3"
+                >
+                  <Barcode className="h-5 w-5 mb-1" />
+                  <span className="text-xs">Código</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled
+                  className="flex-col h-auto py-3"
+                >
+                  <Mic className="h-5 w-5 mb-1" />
+                  <span className="text-xs">Voz</span>
+                </Button>
+              </div>
+              <p className="text-xs text-center text-gray-500">
+                ✨ Foto e código de barras agora disponíveis!
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Photo Upload */}
+        {inputMode === 'photo' && (
+          <PhotoUpload
+            onPhotoSelected={handlePhotoAnalyze}
+            onAnalyzing={setIsAnalyzing}
+          />
+        )}
+
+        {/* Barcode Scanner */}
+        {inputMode === 'barcode' && (
+          <BarcodeScanner
+            onBarcodeScanned={handleBarcodeScanned}
+            onClose={() => setInputMode('text')}
+          />
+        )}
 
         {/* Analysis Results */}
         {analyzedFoods.length > 0 && (
