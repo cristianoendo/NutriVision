@@ -33,14 +33,17 @@ export function Dashboard() {
   const bodyTypeInfo = getBodyTypeRecommendations(bodyMetrics.bodyType)
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-24">
-      {/* Header */}
-      <div className="bg-gradient-to-br from-primary-500 to-primary-600 px-4 pb-8 pt-6 text-white">
-        <div className="mx-auto max-w-4xl">
-          <div className="flex items-center justify-between mb-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-primary-50/30 dark:from-gray-950 dark:via-gray-900 dark:to-primary-950/20 pb-24">
+      {/* Header with animated gradient */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-primary-600 via-primary-500 to-emerald-600 px-4 pb-12 pt-8 text-white shadow-xl">
+        <div className="absolute inset-0 bg-grid-white/[0.05] bg-[size:20px_20px]" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+
+        <div className="relative mx-auto max-w-4xl">
+          <div className="flex items-center justify-between mb-8 animate-fade-in-down">
             <div>
-              <h1 className="text-2xl font-bold">Olá, {user.name}!</h1>
-              <p className="text-primary-100">
+              <h1 className="text-3xl font-bold text-shadow-lg mb-1">Olá, {user.name}! 👋</h1>
+              <p className="text-primary-100 text-shadow">
                 {new Date().toLocaleDateString('pt-BR', {
                   weekday: 'long',
                   day: 'numeric',
@@ -48,33 +51,39 @@ export function Dashboard() {
                 })}
               </p>
             </div>
-            <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
+            <Badge className="bg-white/20 backdrop-blur-sm text-white border border-white/30 shadow-lg font-semibold px-4 py-1.5 animate-pulse-soft">
               {bodyTypeInfo.title}
             </Badge>
           </div>
 
-          {/* Quick Stats */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-lg bg-white/10 p-3 backdrop-blur">
-              <div className="flex items-center gap-2 mb-1">
-                <TrendingDown className="h-4 w-4" />
-                <span className="text-xs opacity-90">IMC</span>
+          {/* Quick Stats with glassmorphism */}
+          <div className="grid grid-cols-3 gap-3 animate-fade-in-up">
+            <div className="glass-card rounded-2xl p-4 hover:scale-105 transition-transform duration-300 cursor-pointer group">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="p-2 rounded-lg bg-white/20 group-hover:bg-white/30 transition-colors">
+                  <TrendingDown className="h-4 w-4" />
+                </div>
+                <span className="text-xs opacity-90 font-medium">IMC</span>
               </div>
-              <p className="text-xl font-bold">{bodyMetrics.bmi.toFixed(1)}</p>
+              <p className="text-2xl font-bold text-shadow">{bodyMetrics.bmi.toFixed(1)}</p>
             </div>
-            <div className="rounded-lg bg-white/10 p-3 backdrop-blur">
-              <div className="flex items-center gap-2 mb-1">
-                <Activity className="h-4 w-4" />
-                <span className="text-xs opacity-90">Meta Cal.</span>
+            <div className="glass-card rounded-2xl p-4 hover:scale-105 transition-transform duration-300 cursor-pointer group">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="p-2 rounded-lg bg-white/20 group-hover:bg-white/30 transition-colors">
+                  <Activity className="h-4 w-4" />
+                </div>
+                <span className="text-xs opacity-90 font-medium">Meta Cal.</span>
               </div>
-              <p className="text-xl font-bold">{Math.round(nutritionGoals.dailyCalories)}</p>
+              <p className="text-2xl font-bold text-shadow">{Math.round(nutritionGoals.dailyCalories)}</p>
             </div>
-            <div className="rounded-lg bg-white/10 p-3 backdrop-blur">
-              <div className="flex items-center gap-2 mb-1">
-                <Droplets className="h-4 w-4" />
-                <span className="text-xs opacity-90">Água</span>
+            <div className="glass-card rounded-2xl p-4 hover:scale-105 transition-transform duration-300 cursor-pointer group">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="p-2 rounded-lg bg-white/20 group-hover:bg-white/30 transition-colors">
+                  <Droplets className="h-4 w-4" />
+                </div>
+                <span className="text-xs opacity-90 font-medium">Água</span>
               </div>
-              <p className="text-xl font-bold">{(nutritionGoals.water / 1000).toFixed(1)}L</p>
+              <p className="text-2xl font-bold text-shadow">{(nutritionGoals.water / 1000).toFixed(1)}L</p>
             </div>
           </div>
         </div>
