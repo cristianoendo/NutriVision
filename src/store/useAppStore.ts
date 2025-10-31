@@ -12,8 +12,15 @@ import {
   calculateBodyMetrics,
   calculateNutritionGoals,
 } from '@/services/calculations'
+import { isSupabaseConfigured } from '@/lib/supabase'
+import { profileService } from '@/services/profileService'
+import { mealsService } from '@/services/mealsService'
+import { waterService } from '@/services/waterService'
 
 interface AppState {
+  // Auth
+  authUserId: string | null
+
   // User data
   user: UserProfile | null
   bodyMetrics: BodyMetrics | null
@@ -23,6 +30,8 @@ interface AppState {
   isOnboarding: boolean
   hasCompletedOnboarding: boolean
   theme: 'light' | 'dark' | 'system'
+  isLoading: boolean
+  error: string | null
 
   // Daily tracking
   dailySummary: DailySummary | null
@@ -31,9 +40,14 @@ interface AppState {
   // Notifications
   notifications: Notification[]
 
+  // Actions - Auth
+  setAuthUserId: (userId: string | null) => void
+  loadUserData: (userId: string) => Promise<void>
+  logout: () => void
+
   // Actions - User
   setUser: (user: UserProfile) => void
-  updateUser: (updates: Partial<UserProfile>) => void
+  updateUser: (updates: Partial<UserProfile>) => Promise<void>
   clearUser: () => void
 
   // Actions - Onboarding
@@ -44,13 +58,14 @@ interface AppState {
   setTheme: (theme: 'light' | 'dark' | 'system') => void
 
   // Actions - Meals
-  addMeal: (meal: Meal) => void
-  updateMeal: (mealId: string, updates: Partial<Meal>) => void
-  deleteMeal: (mealId: string) => void
+  addMeal: (meal: Meal) => Promise<void>
+  updateMeal: (mealId: string, updates: Partial<Meal>) => Promise<void>
+  deleteMeal: (mealId: string) => Promise<void>
   clearTodayMeals: () => void
+  loadTodayMeals: (userId: string) => Promise<void>
 
   // Actions - Water
-  updateWaterIntake: (amount: number) => void
+  updateWaterIntake: (amount: number) => Promise<void>
 
   // Actions - Notifications
   addNotification: (notification: Omit<Notification, 'id'>) => void
@@ -66,15 +81,76 @@ export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
       // Initial state
+      authUserId: null,
       user: null,
       bodyMetrics: null,
       nutritionGoals: null,
       isOnboarding: true,
       hasCompletedOnboarding: false,
       theme: 'system',
+      isLoading: false,
+      error: null,
       dailySummary: null,
       meals: [],
       notifications: [],
+
+      // Auth actions
+      setAuthUserId: (userId) => {
+        set({ authUserId: userId })
+      },
+
+      loadUserData: async (userId) => {
+        if (!isSupabaseConfigured()) return
+
+        set({ isLoading: true, error: null })
+
+        try {
+          // Load profile from Supabase
+          const profile = await profileService.getProfile(userId)
+
+          if (profile) {
+            set({ user: profile, hasCompletedOnboarding: true, isOnboarding: false })
+            get().recalculateMetrics()
+
+            // Load today's meals
+            await get().loadTodayMeals(userId)
+
+            // Load today's water
+            const today = new Date()
+            const waterData = await waterService.getWaterForDate(userId, today)
+            if (waterData && get().dailySummary) {
+              set({
+                dailySummary: {
+                  ...get().dailySummary!,
+                  waterIntake: waterData.amountMl,
+                },
+              })
+            }
+          } else {
+            // No profile found - user needs to complete onboarding
+            set({ isOnboarding: true, hasCompletedOnboarding: false })
+          }
+
+          set({ isLoading: false })
+        } catch (error) {
+          console.error('Error loading user data:', error)
+          set({ error: 'Failed to load user data', isLoading: false })
+        }
+      },
+
+      logout: () => {
+        set({
+          authUserId: null,
+          user: null,
+          bodyMetrics: null,
+          nutritionGoals: null,
+          meals: [],
+          dailySummary: null,
+          notifications: [],
+          hasCompletedOnboarding: false,
+          isOnboarding: true,
+        })
+      },
 
       // User actions
       setUser: (user) => {
@@ -83,13 +159,23 @@ export const useAppStore = create<AppState>()(
         get().recalculateMetrics()
       },
 
-      updateUser: (updates) => {
+      updateUser: async (updates) => {
         const currentUser = get().user
+        const authUserId = get().authUserId
         if (!currentUser) return
 
         const updatedUser = { ...currentUser, ...updates, updatedAt: new Date() }
         set({ user: updatedUser })
         get().recalculateMetrics()
+
+        // Sync to Supabase if configured
+        if (isSupabaseConfigured() && authUserId) {
+          try {
+            await profileService.updateProfile(authUserId, updates)
+          } catch (error) {
+            console.error('Error updating profile in Supabase:', error)
+          }
+        }
       },
 
       clearUser: () => {
@@ -132,33 +218,83 @@ export const useAppStore = create<AppState>()(
       },
 
       // Meal actions
-      addMeal: (meal) => {
+      addMeal: async (meal) => {
         const meals = [...get().meals, meal]
         set({ meals })
         get().updateDailySummary()
+
+        // Sync to Supabase if configured
+        const authUserId = get().authUserId
+        if (isSupabaseConfigured() && authUserId) {
+          try {
+            const savedMeal = await mealsService.createMeal(authUserId, meal)
+            if (savedMeal) {
+              // Update local meal with server ID
+              const updatedMeals = get().meals.map((m) =>
+                m.id === meal.id ? savedMeal : m
+              )
+              set({ meals: updatedMeals })
+            }
+          } catch (error) {
+            console.error('Error saving meal to Supabase:', error)
+          }
+        }
       },
 
-      updateMeal: (mealId, updates) => {
+      updateMeal: async (mealId, updates) => {
         const meals = get().meals.map((meal) =>
           meal.id === mealId ? { ...meal, ...updates } : meal
         )
         set({ meals })
         get().updateDailySummary()
+
+        // Sync to Supabase if configured
+        if (isSupabaseConfigured()) {
+          try {
+            await mealsService.updateMeal(mealId, updates)
+          } catch (error) {
+            console.error('Error updating meal in Supabase:', error)
+          }
+        }
       },
 
-      deleteMeal: (mealId) => {
+      deleteMeal: async (mealId) => {
         const meals = get().meals.filter((meal) => meal.id !== mealId)
         set({ meals })
         get().updateDailySummary()
+
+        // Sync to Supabase if configured
+        if (isSupabaseConfigured()) {
+          try {
+            await mealsService.deleteMeal(mealId)
+          } catch (error) {
+            console.error('Error deleting meal from Supabase:', error)
+          }
+        }
       },
 
       clearTodayMeals: () => {
         set({ meals: [], dailySummary: null })
       },
 
+      loadTodayMeals: async (userId) => {
+        if (!isSupabaseConfigured()) return
+
+        try {
+          const todayMeals = await mealsService.getTodayMeals(userId)
+          set({ meals: todayMeals })
+          get().updateDailySummary()
+        } catch (error) {
+          console.error('Error loading today meals:', error)
+        }
+      },
+
       // Water actions
-      updateWaterIntake: (amount) => {
+      updateWaterIntake: async (amount) => {
         const currentSummary = get().dailySummary
+        const authUserId = get().authUserId
+        const nutritionGoals = get().nutritionGoals
+
         if (currentSummary) {
           set({
             dailySummary: {
@@ -166,6 +302,21 @@ export const useAppStore = create<AppState>()(
               waterIntake: amount,
             },
           })
+        }
+
+        // Sync to Supabase if configured
+        if (isSupabaseConfigured() && authUserId && nutritionGoals) {
+          try {
+            const today = new Date()
+            await waterService.updateWaterIntake(
+              authUserId,
+              today,
+              amount,
+              nutritionGoals.water
+            )
+          } catch (error) {
+            console.error('Error updating water intake in Supabase:', error)
+          }
         }
       },
 
@@ -276,10 +427,12 @@ export const useAppStore = create<AppState>()(
     {
       name: 'vidaleve-storage',
       partialize: (state) => ({
+        authUserId: state.authUserId,
         user: state.user,
         hasCompletedOnboarding: state.hasCompletedOnboarding,
         theme: state.theme,
-        meals: state.meals,
+        // Only persist meals/notifications if Supabase is not configured (fallback)
+        meals: isSupabaseConfigured() ? [] : state.meals,
         notifications: state.notifications,
       }),
     }

@@ -6,7 +6,9 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAppStore } from '@/store/useAppStore'
 import type { UserProfile, ActivityLevel, ReproductivePhase, Goal } from '@/types'
-import { ChevronLeft, ChevronRight, Check } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Check, Loader2 } from 'lucide-react'
+import { isSupabaseConfigured } from '@/lib/supabase'
+import { profileService } from '@/services/profileService'
 
 interface UserProfileFormProps {
   onComplete: () => void
@@ -14,7 +16,8 @@ interface UserProfileFormProps {
 
 export function UserProfileForm({ onComplete }: UserProfileFormProps) {
   const [step, setStep] = useState(0)
-  const { setUser, completeOnboarding } = useAppStore()
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const { setUser, completeOnboarding, authUserId } = useAppStore()
 
   const [formData, setFormData] = useState({
     name: '',
@@ -45,7 +48,9 @@ export function UserProfileForm({ onComplete }: UserProfileFormProps) {
     }
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    setIsSubmitting(true)
+
     const userProfile: UserProfile = {
       id: crypto.randomUUID(),
       name: formData.name,
@@ -62,8 +67,25 @@ export function UserProfileForm({ onComplete }: UserProfileFormProps) {
       updatedAt: new Date(),
     }
 
+    // Save to local store first (immediate feedback)
     setUser(userProfile)
     completeOnboarding()
+
+    // Save to Supabase if configured and authenticated
+    if (isSupabaseConfigured() && authUserId) {
+      try {
+        const savedProfile = await profileService.createProfile(authUserId, userProfile)
+        if (savedProfile) {
+          // Update with server-generated ID
+          setUser(savedProfile)
+        }
+      } catch (error) {
+        console.error('Error saving profile to Supabase:', error)
+        // Continue anyway - profile is saved locally
+      }
+    }
+
+    setIsSubmitting(false)
     onComplete()
   }
 
@@ -363,9 +385,18 @@ export function UserProfileForm({ onComplete }: UserProfileFormProps) {
                 <ChevronRight className="ml-1 h-4 w-4" />
               </Button>
             ) : (
-              <Button onClick={handleSubmit} disabled={!isStepValid()}>
-                <Check className="mr-1 h-4 w-4" />
-                Finalizar
+              <Button onClick={handleSubmit} disabled={!isStepValid() || isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <Check className="mr-1 h-4 w-4" />
+                    Finalizar
+                  </>
+                )}
               </Button>
             )}
           </div>

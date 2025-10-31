@@ -17,11 +17,14 @@ import {
   Edit,
   Save,
   X,
+  LogOut,
 } from 'lucide-react'
 import { getBodyTypeRecommendations } from '@/services/calculations'
+import { isSupabaseConfigured } from '@/lib/supabase'
+import { authService } from '@/services/authService'
 
 export function Profile() {
-  const { user, bodyMetrics, nutritionGoals, updateUser } = useAppStore()
+  const { user, bodyMetrics, nutritionGoals, updateUser, logout } = useAppStore()
   const [isEditing, setIsEditing] = useState(false)
   const [editData, setEditData] = useState({
     weight: user?.weight.toString() || '',
@@ -51,6 +54,17 @@ export function Profile() {
       hip: user.hip.toString(),
     })
     setIsEditing(false)
+  }
+
+  const handleLogout = async () => {
+    if (window.confirm('Tem certeza que deseja sair?')) {
+      // Logout from Supabase if configured
+      if (isSupabaseConfigured()) {
+        await authService.signOut()
+      }
+      // Clear local state
+      logout()
+    }
   }
 
   const getBMIColor = (category: string) => {
@@ -363,6 +377,28 @@ export function Profile() {
             </ul>
           </CardContent>
         </Card>
+
+        {/* Logout Button (only if Supabase is configured) */}
+        {isSupabaseConfigured() && (
+          <Card className="border-red-200 dark:border-red-800">
+            <CardHeader>
+              <CardTitle className="text-red-600 dark:text-red-400">Sair da Conta</CardTitle>
+              <CardDescription>
+                Fazer logout da sua conta VidaLeve
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="outline"
+                className="w-full border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
+                onClick={handleLogout}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Sair
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   )
